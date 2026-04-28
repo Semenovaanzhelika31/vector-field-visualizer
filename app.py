@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 # Настройка страницы
 st.set_page_config(page_title="Визуализация векторных полей", layout="wide")
-st.title("🧲 Научная визуализация векторных полей")
+st.title(" Научная визуализация векторных полей")
 st.markdown("Интерактивное приложение для визуализации двумерных векторных полей")
 
 # Боковая панель с параметрами
@@ -70,12 +70,12 @@ plt.colorbar(im, ax=ax, label='Модуль вектора')
 st.pyplot(fig)
 
 # Кнопка сохранения
-if st.button("💾 Сохранить изображение как PNG"):
+if st.button(" Сохранить изображение как PNG"):
     fig.savefig("vector_field.png", dpi=150)
     st.success("Изображение сохранено как vector_field.png")
 
 # Информация о приложении
-with st.expander("ℹ️ О приложении"):
+with st.expander(" О приложении"):
     st.markdown("""
     **Доступные типы полей:**
     - **Вихрь** – вращение вокруг центра
