@@ -21,18 +21,18 @@ show_streamlines = st.sidebar.checkbox("Показать линии тока", T
 Q = st.sidebar.slider("Мощность источника Q (для источника/стока/вихреисточника)", -2.0, 2.0, 1.0, 0.1)
 Gamma = st.sidebar.slider("Циркуляция Γ (для вихря/вихреисточника)", -2.0, 2.0, 1.0, 0.1)
 
+flow_angle = st.sidebar.slider("Угол равномерного потока (градусы)", 0, 360, 0)
+
 eps = 1e-6
 
 x = np.linspace(-3, 3, grid_size)
 y = np.linspace(-3, 3, grid_size)
 X, Y = np.meshgrid(x, y)
 
-# Плотная сетка для линий тока
 x_stream = np.linspace(-3, 3, 100)
 y_stream = np.linspace(-3, 3, 100)
 Xs, Ys = np.meshgrid(x_stream, y_stream)
 
-# Инициализация переменных
 U, V, Us, Vs = None, None, None, None
 title = ""
 
@@ -56,7 +56,7 @@ elif field_type == "Источник":
 
 elif field_type == "Сток":
     r2 = X**2 + Y**2 + eps
-    U = -abs(Q) * X / (2*np.pi * r2)   # сток – отрицательная мощность
+    U = -abs(Q) * X / (2*np.pi * r2)
     V = -abs(Q) * Y / (2*np.pi * r2)
     title = f"Сток (|Q| = {abs(Q)})"
     r2s = Xs**2 + Ys**2 + eps
@@ -75,7 +75,7 @@ elif field_type == "Вихреисточник":
 elif field_type == "Диполь":
     r2 = X**2 + Y**2 + eps
     r4 = r2**2
-    U = (X**2 - Y**2) / r4      # M/2π принят равным 1 для простоты
+    U = (X**2 - Y**2) / r4
     V = (2 * X * Y) / r4
     title = "Диполь (ось X)"
     r2s = Xs**2 + Ys**2 + eps
@@ -83,19 +83,18 @@ elif field_type == "Диполь":
     Us = (Xs**2 - Ys**2) / r4s
     Vs = (2 * Xs * Ys) / r4s
 
-else:  # Равномерный поток
-    U = np.ones_like(X)
-    V = np.zeros_like(Y)
-    title = "Равномерный поток (U = const)"
-    Us = np.ones_like(Xs)
-    Vs = np.zeros_like(Ys)
+else:  
+    alpha_rad = np.radians(flow_angle)
+    U = np.cos(alpha_rad) * np.ones_like(X)
+    V = np.sin(alpha_rad) * np.ones_like(Y)
+    title = f"Равномерный поток (угол = {flow_angle}°), V₀ = 1"
+    Us = np.cos(alpha_rad) * np.ones_like(Xs)
+    Vs = np.sin(alpha_rad) * np.ones_like(Ys)
 
-# Модуль скорости для цветовой шкалы
 magnitude = np.sqrt(U**2 + V**2)
 
 fig, ax = plt.subplots(figsize=(10, 8))
 
-# Глифы с длиной, пропорциональной модулю, и цветом по модулю
 q = ax.quiver(X, Y, U, V, magnitude,
               scale=arrow_scale,
               scale_units='xy',
@@ -105,7 +104,6 @@ q = ax.quiver(X, Y, U, V, magnitude,
 
 plt.colorbar(q, ax=ax, label='Модуль скорости')
 
-# Линии тока
 if show_streamlines:
     ax.streamplot(Xs, Ys, Us, Vs,
                   color='red',
@@ -136,12 +134,12 @@ with st.expander("О приложении"):
     - **Сток** – радиальное течение к центру
     - **Вихреисточник** – суперпозиция источника и вихря (логарифмические спирали)
     - **Диполь** – поле диполя
-    - **Равномерный поток** – постоянная скорость
+    - **Равномерный поток** – постоянная скорость под заданным углом
 
-    **Особенности:**
+    **Особенности реализации:**
     - Длина стрелки пропорциональна модулю скорости (`scale_units='xy'`).
-    - Цвет стрелок соответствует модулю (цветовая шкала).
+    - Цвет стрелок соответствует модулю скорости (цветовая шкала).
     - Линии тока (красные) строятся численным интегрированием.
     - Добавлена защита от деления на ноль.
-    - Для вихря и вихреисточника можно регулировать циркуляцию Γ, для источника/стока/вихреисточника – мощность Q.
+    - Для вихря и вихреисточника регулируется циркуляция Γ, для источника/стока/вихреисточника – мощность Q.
     """)
