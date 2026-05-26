@@ -14,9 +14,14 @@ field_type = st.sidebar.selectbox(
 )
 
 grid_size = st.sidebar.slider("Размер сетки (N x N)", 10, 50, 20)
-arrow_scale = st.sidebar.slider("Множитель длины стрелок", 0.1, 1.5, 0.5)
 show_grid = st.sidebar.checkbox("Показать сетку", True)
 show_streamlines = st.sidebar.checkbox("Показать линии тока", True)
+
+# Отдельные параметры масштаба для разных типов полей
+if field_type == "Диполь":
+    arrow_scale = st.sidebar.slider("Множитель длины стрелок (для диполя)", 10, 100, 40, 5)
+else:
+    arrow_scale = st.sidebar.slider("Множитель длины стрелок", 0.1, 2.0, 0.5, 0.05)
 
 # Динамические параметры
 if field_type in ["Источник/Сток", "Вихреисточник"]:
@@ -94,21 +99,9 @@ else:
 
 magnitude = np.sqrt(U**2 + V**2)
 
-# Для диполя: ограничиваем максимальную длину стрелок
-if field_type == "Диполь":
-    max_arrow_length = 2.0  # максимальная длина стрелки в координатах
-    # Нормируем слишком длинные векторы
-    length = np.sqrt(U**2 + V**2)
-    scale_factor = np.where(length > max_arrow_length, max_arrow_length / length, 1.0)
-    U_plot = U * scale_factor
-    V_plot = V * scale_factor
-    mag_plot = magnitude  # цвет оставляем по реальному модулю
-else:
-    U_plot, V_plot, mag_plot = U, V, magnitude
-
 fig, ax = plt.subplots(figsize=(10, 8))
 
-q = ax.quiver(X, Y, U_plot, V_plot, mag_plot,
+q = ax.quiver(X, Y, U, V, magnitude,
               scale=arrow_scale,
               scale_units='xy',
               cmap='viridis',
@@ -148,9 +141,7 @@ with st.expander("О приложении"):
     - **Диполь** – поле диполя, замкнутые линии тока
     - **Равномерный поток** – постоянная скорость под заданным углом
 
-    **Особенности:**
-    - Длина стрелки пропорциональна модулю скорости
-    - Цвет стрелок соответствует модулю скорости
-    - Линии тока (красные) строятся численным интегрированием
-    - **Для диполя** длина стрелок ограничена (не более 2.0), чтобы избежать огромных стрелок в центре
+    **Настройка длины стрелок:**
+    - Для **диполя** используется отдельный слайдер (значения 10–100), так как поле диполя очень сильное в центре
+    - Для остальных типов полей стандартный слайдер (0.1–2.0)
     """)
