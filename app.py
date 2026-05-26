@@ -17,15 +17,12 @@ grid_size = st.sidebar.slider("Размер сетки (N x N)", 10, 50, 20)
 show_grid = st.sidebar.checkbox("Показать сетку", True)
 show_streamlines = st.sidebar.checkbox("Показать линии тока", True)
 
-# Отдельные параметры масштаба для разных типов полей
+# Масштаб стрелок с разными диапазонами для разных полей
 if field_type == "Диполь":
-    arrow_scale = st.sidebar.slider("Масштаб стрелок (чем больше, тем короче)", 20, 150, 60, 10)
+    # Для диполя нужен большой масштаб, чтобы стрелки были короткими
+    arrow_scale = st.sidebar.slider("Длина стрелок (чем больше, тем короче)", 30, 200, 80, 10)
 else:
-    arrow_scale = st.sidebar.slider("Масштаб стрелок", 0.1, 2.0, 0.5, 0.05)
-
-# Для диполя: исключаем центр
-if field_type == "Диполь":
-    exclude_radius = st.sidebar.slider("Радиус исключения стрелок (центр)", 0.0, 1.0, 0.3, 0.05)
+    arrow_scale = st.sidebar.slider("Множитель длины стрелок", 0.1, 2.0, 0.5, 0.05)
 
 # Динамические параметры
 if field_type in ["Источник/Сток", "Вихреисточник"]:
@@ -45,10 +42,12 @@ else:
 
 eps = 1e-6
 
+# Координатная сетка
 x = np.linspace(-3, 3, grid_size)
 y = np.linspace(-3, 3, grid_size)
 X, Y = np.meshgrid(x, y)
 
+# Более мелкая сетка для линий тока
 x_stream = np.linspace(-3, 3, 100)
 y_stream = np.linspace(-3, 3, 100)
 Xs, Ys = np.meshgrid(x_stream, y_stream)
@@ -93,7 +92,7 @@ elif field_type == "Диполь":
     Us = (Xs**2 - Ys**2) / r4s
     Vs = (2 * Xs * Ys) / r4s
 
-else:
+else:  # Равномерный поток
     alpha_rad = np.radians(flow_angle)
     U = np.cos(alpha_rad) * np.ones_like(X)
     V = np.sin(alpha_rad) * np.ones_like(Y)
@@ -103,38 +102,19 @@ else:
 
 magnitude = np.sqrt(U**2 + V**2)
 
-# Для диполя: исключаем векторы в центре (там особые точки)
-if field_type == "Диполь" and exclude_radius > 0:
-    r = np.sqrt(X**2 + Y**2)
-    mask = r > exclude_radius
-    U_plot = np.where(mask, U, np.nan)
-    V_plot = np.where(mask, V, np.nan)
-    mag_plot = np.where(mask, magnitude, np.nan)
-    filtered_count = np.sum(~mask)
-    if filtered_count > 0:
-        st.sidebar.info(f"✂️ Исключено {filtered_count} стрелок в центре (r < {exclude_radius})")
-else:
-    U_plot, V_plot, mag_plot = U, V, magnitude
-
 fig, ax = plt.subplots(figsize=(10, 8))
 
-# Обычная цветовая шкала без LogNorm
-q = ax.quiver(X, Y, U_plot, V_plot, mag_plot,
+# Отрисовка стрелок
+q = ax.quiver(X, Y, U, V, magnitude,
               scale=arrow_scale,
               scale_units='xy',
               cmap='viridis',
               alpha=0.8,
               width=0.005)
 
-# Добавляем colorbar с ограничением диапазона для диполя
-if field_type == "Диполь":
-    # Ограничиваем диапазон цветовой шкалы для лучшей видимости
-    vmax = min(mag_plot.max(), 5.0) if not np.isnan(mag_plot.max()) else 5.0
-    cb = plt.colorbar(q, ax=ax, label='Модуль скорости')
-    cb.set_clim(0, vmax)
-else:
-    plt.colorbar(q, ax=ax, label='Модуль скорости')
+plt.colorbar(q, ax=ax, label='Модуль скорости')
 
+# Линии тока
 if show_streamlines:
     ax.streamplot(Xs, Ys, Us, Vs,
                   color='red',
@@ -167,7 +147,6 @@ with st.expander("О приложении"):
     - **Равномерный поток** – постоянная скорость под заданным углом
 
     **Для диполя:**
-    - Стрелки в центре исключаются (можно настроить радиус)
-    - Цветовая шкала ограничена сверху для лучшей видимости
-    - Масштаб стрелок (чем больше значение, тем короче стрелки)
+    - Стрелки по умолчанию короче (масштаб 80)
+    - Покрутите слайдер "Длина стрелок" чтобы сделать их ещё короче или длиннее
     """)
