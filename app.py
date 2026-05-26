@@ -3,38 +3,41 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Визуализация векторных полей", layout="wide")
-st.title("Научная визуализация векторных полей")
-st.markdown("Интерактивное приложение для визуализации двумерных векторных полей идеальной жидкости")
+st.title("Научная визуализация векторных полей идеальной жидкости")
+st.markdown("Интерактивное приложение для визуализации двумерных векторных полей")
 
 st.sidebar.header("Параметры визуализации")
 
+# Типы полей (объединён источник и сток)
 field_type = st.sidebar.selectbox(
     "Тип векторного поля",
-    ["Вихрь", "Источник", "Сток", "Вихреисточник", "Диполь", "Равномерный поток"]
+    ["Источник/Сток", "Вихрь", "Вихреисточник", "Диполь", "Равномерный поток"]
 )
 
-grid_size = st.sidebar.slider("Размер сетки (N x N)", 10, 50, 20)
-arrow_scale = st.sidebar.slider("Множитель длины стрелок", 0.1, 1.5, 0.5)
+grid_size = st.sidebar.slider("Размер сетки (N x N)", 10, 40, 20)
+arrow_density = st.sidebar.slider("Густота стрелок (каждая N-я точка)", 1, 3, 1)
 show_grid = st.sidebar.checkbox("Показать сетку", True)
 show_streamlines = st.sidebar.checkbox("Показать линии тока", True)
 separate_plots = st.sidebar.checkbox("Раздельные графики (векторы и линии тока отдельно)", False)
 
-# Фильтрация больших векторов
-filter_vectors = st.sidebar.checkbox("Фильтровать большие векторы", True)
-max_speed = st.sidebar.slider("Максимальный модуль скорости для отображения", 0.5, 10.0, 3.0, 0.5)
-
-Q = st.sidebar.slider("Мощность источника Q", -2.0, 2.0, 1.0, 0.1)
+# Параметры течений
+Q = st.sidebar.slider("Мощность источника Q (положит. - источник, отриц. - сток)", -2.0, 2.0, 1.0, 0.1)
 Gamma = st.sidebar.slider("Циркуляция Γ", -2.0, 2.0, 1.0, 0.1)
 flow_angle = st.sidebar.slider("Угол равномерного потока (градусы)", 0, 360, 0)
 
+# Фильтрация — отключаем отображение векторов вблизи центра
+exclude_radius = st.sidebar.slider("Радиус исключения векторов (в центре)", 0.0, 1.0, 0.3, 0.05)
+
 eps = 1e-6
 
+# Координатная сетка
 x = np.linspace(-3, 3, grid_size)
 y = np.linspace(-3, 3, grid_size)
 X, Y = np.meshgrid(x, y)
 
-x_stream = np.linspace(-3, 3, 100)
-y_stream = np.linspace(-3, 3, 100)
+# Более мелкая сетка для линий тока
+x_stream = np.linspace(-3, 3, 150)
+y_stream = np.linspace(-3, 3, 150)
 Xs, Ys = np.meshgrid(x_stream, y_stream)
 
 # Функции для потенциалов
@@ -42,16 +45,12 @@ def compute_potentials(X, Y, field_type, Q, Gamma, flow_angle):
     r = np.sqrt(X**2 + Y**2) + eps
     theta = np.arctan2(Y, X)
     
-    if field_type == "Вихрь":
-        phi = Gamma / (2*np.pi) * theta
-        psi = -Gamma / (2*np.pi) * np.log(r)
-    elif field_type == "Источник":
+    if field_type == "Источник/Сток":
         phi = Q / (2*np.pi) * np.log(r)
         psi = Q / (2*np.pi) * theta
-    elif field_type == "Сток":
-        Q_neg = -abs(Q)
-        phi = Q_neg / (2*np.pi) * np.log(r)
-        psi = Q_neg / (2*np.pi) * theta
+    elif field_type == "Вихрь":
+        phi = Gamma / (2*np.pi) * theta
+        psi = -Gamma / (2*np.pi) * np.log(r)
     elif field_type == "Вихреисточник":
         phi = Q / (2*np.pi) * np.log(r) + Gamma / (2*np.pi) * theta
         psi = Q / (2*np.pi) * theta - Gamma / (2*np.pi) * np.log(r)
@@ -66,9 +65,6 @@ def compute_potentials(X, Y, field_type, Q, Gamma, flow_angle):
     return phi, psi
 
 # Расчёт полей скоростей
-U, V, Us, Vs = None, None, None, None
-title = ""
-
 if field_type == "Вихрь":
     r2 = X**2 + Y**2 + eps
     U = -Gamma * Y / (2*np.pi * r2)
@@ -78,24 +74,15 @@ if field_type == "Вихрь":
     Us = -Gamma * Ys / (2*np.pi * r2s)
     Vs =  Gamma * Xs / (2*np.pi * r2s)
 
-elif field_type == "Источник":
+elif field_type == "Источник/Сток":
     r2 = X**2 + Y**2 + eps
     U = Q * X / (2*np.pi * r2)
     V = Q * Y / (2*np.pi * r2)
-    title = f"Источник (Q = {Q})"
+    type_name = "Источник" if Q > 0 else "Сток"
+    title = f"{type_name} (Q = {Q})"
     r2s = Xs**2 + Ys**2 + eps
     Us = Q * Xs / (2*np.pi * r2s)
     Vs = Q * Ys / (2*np.pi * r2s)
-
-elif field_type == "Сток":
-    Q_neg = -abs(Q)
-    r2 = X**2 + Y**2 + eps
-    U = Q_neg * X / (2*np.pi * r2)
-    V = Q_neg * Y / (2*np.pi * r2)
-    title = f"Сток (Q = {Q_neg})"
-    r2s = Xs**2 + Ys**2 + eps
-    Us = Q_neg * Xs / (2*np.pi * r2s)
-    Vs = Q_neg * Ys / (2*np.pi * r2s)
 
 elif field_type == "Вихреисточник":
     r2 = X**2 + Y**2 + eps
@@ -128,38 +115,52 @@ else:  # Равномерный поток
 # Вычисляем потенциалы
 phi, psi = compute_potentials(X, Y, field_type, Q, Gamma, flow_angle)
 
-# Фильтрация больших векторов
+# --- ФИЛЬТРАЦИЯ: исключаем векторы вблизи центра (там бесконечность) ---
+radius = np.sqrt(X**2 + Y**2)
+mask = radius > exclude_radius
+
+# Также ограничиваем максимальную длину вектора для визуализации
 magnitude = np.sqrt(U**2 + V**2)
-if filter_vectors:
-    mask = magnitude <= max_speed
-    U_filtered = np.where(mask, U, np.nan)
-    V_filtered = np.where(mask, V, np.nan)
-    magnitude_filtered = np.where(mask, magnitude, np.nan)
-    # Для отображения используем отфильтрованные данные
-    U_display, V_display, mag_display = U_filtered, V_filtered, magnitude_filtered
-    # Считаем сколько векторов отфильтровано
-    filtered_count = np.sum(~mask)
-    if filtered_count > 0:
-        st.sidebar.info(f"✂️ Отфильтровано {filtered_count} векторов (|v| > {max_speed})")
+max_magnitude_for_scale = np.percentile(magnitude[mask], 95) if np.any(mask) else 1.0
+
+# Применяем маску
+U_display = np.where(mask, U, np.nan)
+V_display = np.where(mask, V, np.nan)
+mag_display = np.where(mask, magnitude, np.nan)
+
+filtered_count = np.sum(~mask)
+if filtered_count > 0 and exclude_radius > 0:
+    st.sidebar.info(f"✂️ Исключено {filtered_count} векторов (r < {exclude_radius})")
+
+# Прореживание стрелок для уменьшения загромождения
+if arrow_density > 1:
+    U_display = U_display[::arrow_density, ::arrow_density]
+    V_display = V_display[::arrow_density, ::arrow_density]
+    mag_display = mag_display[::arrow_density, ::arrow_density]
+    X_plot = X[::arrow_density, ::arrow_density]
+    Y_plot = Y[::arrow_density, ::arrow_density]
 else:
-    U_display, V_display, mag_display = U, V, magnitude
+    X_plot, Y_plot = X, Y
 
 # Функция отрисовки поля
 def plot_vector_field(ax, X, Y, U, V, mag, title, show_streamlines=False, Xs=None, Ys=None, Us=None, Vs=None):
+    # quiver с правильным масштабированием
     q = ax.quiver(X, Y, U, V, mag,
-                  scale=arrow_scale,
+                  scale=30,  # фиксированный масштаб, а не auto
                   scale_units='xy',
                   cmap='viridis',
                   alpha=0.8,
-                  width=0.005)
+                  width=0.008,
+                  headwidth=3,
+                  headlength=4)
     plt.colorbar(q, ax=ax, label='Модуль скорости')
     
     if show_streamlines and Xs is not None:
         ax.streamplot(Xs, Ys, Us, Vs,
                       color='red',
-                      linewidth=0.8,
-                      density=1.5,
-                      arrowsize=0.8)
+                      linewidth=1.0,
+                      density=1.2,
+                      arrowsize=0.6)
     
     ax.set_title(title, fontsize=12)
     ax.set_xlabel("x")
@@ -176,13 +177,12 @@ if separate_plots:
     
     with col1:
         fig1, ax1 = plt.subplots(figsize=(6, 6))
-        plot_vector_field(ax1, X, Y, U_display, V_display, mag_display,
+        plot_vector_field(ax1, X_plot, Y_plot, U_display, V_display, mag_display,
                          title + " (векторы)", show_streamlines=False)
         st.pyplot(fig1)
     
     with col2:
         fig2, ax2 = plt.subplots(figsize=(6, 6))
-        # Для линий тока используем полные данные (без фильтрации, чтобы линии были непрерывными)
         mag_stream = np.sqrt(Us**2 + Vs**2)
         plot_vector_field(ax2, Xs, Ys, Us, Vs, mag_stream,
                          title + " (линии тока)", show_streamlines=True,
@@ -190,7 +190,7 @@ if separate_plots:
         st.pyplot(fig2)
 else:
     fig, ax = plt.subplots(figsize=(10, 8))
-    plot_vector_field(ax, X, Y, U_display, V_display, mag_display, title,
+    plot_vector_field(ax, X_plot, Y_plot, U_display, V_display, mag_display, title,
                      show_streamlines=show_streamlines, Xs=Xs, Ys=Ys, Us=Us, Vs=Vs)
     st.pyplot(fig)
 
@@ -220,62 +220,59 @@ if st.button("Сохранить изображение как PNG"):
 
 # Информация о течении
 with st.expander("📖 О текущем течении"):
-    if field_type == "Источник":
-        st.markdown(r"""
-        **Источник ($Q > 0$)**
-        - **Потенциал скорости:** $\varphi = \frac{Q}{2\pi}\ln r$
-        - **Функция тока:** $\psi = \frac{Q}{2\pi}\theta$
-        - **Поле скоростей:** $u_r = \frac{Q}{2\pi r}$, $u_\theta = 0$
-        - **Анализ:** Жидкость равномерно истекает из точечного источника. Линии тока — радиальные прямые.
-        """)
-    elif field_type == "Сток":
-        st.markdown(r"""
-        **Сток ($Q < 0$)**
-        - **Потенциал скорости:** $\varphi = -\frac{|Q|}{2\pi}\ln r$
-        - **Функция тока:** $\psi = -\frac{|Q|}{2\pi}\theta$
-        - **Поле скоростей:** $u_r = -\frac{|Q|}{2\pi r}$, $u_\theta = 0$
-        - **Анализ:** Жидкость равномерно поглощается в центре. Линии тока — радиальные прямые к центру.
+    if field_type == "Источник/Сток":
+        sign = "положительная" if Q > 0 else "отрицательная"
+        name = "Источник" if Q > 0 else "Сток"
+        st.markdown(f"""
+        **{name} (Q = {Q})**
+        - **Потенциал скорости:** $\\varphi = \\frac{{Q}}{{2\\pi}}\\ln r$
+        - **Функция тока:** $\\psi = \\frac{{Q}}{{2\\pi}}\\theta$
+        - **Поле скоростей:** $u_r = \\frac{{Q}}{{2\\pi r}}$, $u_\\theta = 0$
+        - **Анализ:** {name} — радиальное течение. При Q>0 жидкость вытекает из центра, при Q<0 — втекает.
+        - **Визуализация:** векторы в области r < {exclude_radius} исключены (особая точка).
         """)
     elif field_type == "Вихрь":
-        st.markdown(r"""
-        **Вихрь (потенциальный)**
-        - **Потенциал скорости:** $\varphi = \frac{\Gamma}{2\pi}\theta$
-        - **Функция тока:** $\psi = -\frac{\Gamma}{2\pi}\ln r$
-        - **Поле скоростей:** $u_r = 0$, $u_\theta = \frac{\Gamma}{2\pi r}$
+        st.markdown(f"""
+        **Вихрь (Γ = {Gamma})**
+        - **Потенциал скорости:** $\\varphi = \\frac{{\\Gamma}}{{2\\pi}}\\theta$
+        - **Функция тока:** $\\psi = -\\frac{{\\Gamma}}{{2\\pi}}\\ln r$
+        - **Поле скоростей:** $u_r = 0$, $u_\\theta = \\frac{{\\Gamma}}{{2\\pi r}}$
         - **Анализ:** Круговое течение. Линии тока — концентрические окружности.
         """)
     elif field_type == "Вихреисточник":
-        st.markdown(r"""
-        **Вихреисточник**
-        - **Потенциал скорости:** $\varphi = \frac{Q}{2\pi}\ln r + \frac{\Gamma}{2\pi}\theta$
-        - **Функция тока:** $\psi = \frac{Q}{2\pi}\theta - \frac{\Gamma}{2\pi}\ln r$
-        - **Поле скоростей:** $u_r = \frac{Q}{2\pi r}$, $u_\theta = \frac{\Gamma}{2\pi r}$
+        st.markdown(f"""
+        **Вихреисточник (Q = {Q}, Γ = {Gamma})**
+        - **Потенциал скорости:** $\\varphi = \\frac{{Q}}{{2\\pi}}\\ln r + \\frac{{\\Gamma}}{{2\\pi}}\\theta$
+        - **Функция тока:** $\\psi = \\frac{{Q}}{{2\\pi}}\\theta - \\frac{{\\Gamma}}{{2\\pi}}\\ln r$
+        - **Поле скоростей:** $u_r = \\frac{{Q}}{{2\\pi r}}$, $u_\\theta = \\frac{{\\Gamma}}{{2\\pi r}}$
         - **Анализ:** Спиралевидные линии тока. Суперпозиция источника и вихря.
         """)
     elif field_type == "Диполь":
-        st.markdown(r"""
+        st.markdown(f"""
         **Диполь**
-        - **Потенциал скорости:** $\varphi = \frac{M}{2\pi}\frac{x}{x^2+y^2} = \frac{M\cos\theta}{2\pi r}$
-        - **Функция тока:** $\psi = -\frac{M}{2\pi}\frac{y}{x^2+y^2} = -\frac{M\sin\theta}{2\pi r}$
-        - **Поле скоростей:** $u_r = \frac{M\cos\theta}{2\pi r^2}$, $u_\theta = \frac{M\sin\theta}{2\pi r^2}$
-        - **Анализ:** Замкнутые линии тока. В центре — особая точка. **Векторы в центре отфильтрованы**.
+        - **Потенциал скорости:** $\\varphi = \\frac{{M}}{{2\\pi}}\\frac{{x}}{{x^2+y^2}} = \\frac{{M\\cos\\theta}}{{2\\pi r}}$
+        - **Функция тока:** $\\psi = -\\frac{{M}}{{2\\pi}}\\frac{{y}}{{x^2+y^2}} = -\\frac{{M\\sin\\theta}}{{2\\pi r}}$
+        - **Поле скоростей:** $u_r = \\frac{{M\\cos\\theta}}{{2\\pi r^2}}$, $u_\\theta = \\frac{{M\\sin\\theta}}{{2\\pi r^2}}$
+        - **Анализ:** Замкнутые линии тока. **Векторы в центре исключены (r < {exclude_radius})**.
         """)
     else:
-        st.markdown(r"""
-        **Равномерный поток**
-        - **Потенциал скорости:** $\varphi = V_0(x\cos\alpha_0 + y\sin\alpha_0)$
-        - **Функция тока:** $\psi = V_0(y\cos\alpha_0 - x\sin\alpha_0)$
-        - **Поле скоростей:** $u_x = V_0\cos\alpha_0$, $u_y = V_0\sin\alpha_0$
+        st.markdown(f"""
+        **Равномерный поток (угол = {flow_angle}°)**
+        - **Потенциал скорости:** $\\varphi = V_0(x\\cos\\alpha_0 + y\\sin\\alpha_0)$
+        - **Функция тока:** $\\psi = V_0(y\\cos\\alpha_0 - x\\sin\\alpha_0)$
+        - **Поле скоростей:** $u_x = V_0\\cos\\alpha_0$, $u_y = V_0\\sin\\alpha_0$
         - **Анализ:** Параллельные линии тока. Постоянная скорость.
         """)
 
 with st.expander("ℹ️ О приложении"):
-    st.markdown("""
-    **Возможности:**
-    - ✅ Фильтрация больших векторов (для диполя, источника, вихря)
-    - ✅ Раздельные графики (векторы и линии тока отдельно)
-    - ✅ Визуализация потенциала скорости и функции тока
-    - ✅ Интерактивная настройка параметров
+    st.markdown(f"""
+    **Ключевые изменения:**
+    - ✅ **Источник и Сток объединены** — регулируется знаком Q
+    - ✅ **Исключение векторов вблизи особой точки** (радиус {exclude_radius})
+    - ✅ **Фиксированный масштаб стрелок** (scale=30) вместо auto
+    - ✅ **Прореживание стрелок** (каждая {arrow_density}-я точка)
     
-    **Фильтрация:** векторы с модулем скорости > порога не отображаются.
+    **Почему стрелки больше не огромные:**
+    1. Векторы внутри радиуса {exclude_radius} не рисуются
+    2. Масштаб стрелок фиксированный, а не подстраивается под максимальный вектор
     """)
