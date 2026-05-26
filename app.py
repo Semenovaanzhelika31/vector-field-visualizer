@@ -18,11 +18,19 @@ arrow_scale = st.sidebar.slider("Множитель длины стрелок", 
 show_grid = st.sidebar.checkbox("Показать сетку", True)
 show_streamlines = st.sidebar.checkbox("Показать линии тока", True)
 
-# Динамические параметры — показываем только нужные
+# Фильтрация больших векторов (только для диполя)
+if field_type == "Диполь":
+    filter_vectors = st.sidebar.checkbox("Фильтровать большие векторы", True)
+    max_speed = st.sidebar.slider("Максимальный модуль скорости", 0.5, 5.0, 2.0, 0.5)
+else:
+    filter_vectors = False
+    max_speed = 10.0
+
+# Динамические параметры
 if field_type in ["Источник/Сток", "Вихреисточник"]:
     Q = st.sidebar.slider("Мощность источника Q (+ источник, - сток)", -2.0, 2.0, 1.0, 0.1)
 else:
-    Q = 1.0  # значение по умолчанию, не используется
+    Q = 1.0
 
 if field_type in ["Вихрь", "Вихреисточник"]:
     Gamma = st.sidebar.slider("Циркуляция Γ", -2.0, 2.0, 1.0, 0.1)
@@ -43,9 +51,6 @@ X, Y = np.meshgrid(x, y)
 x_stream = np.linspace(-3, 3, 100)
 y_stream = np.linspace(-3, 3, 100)
 Xs, Ys = np.meshgrid(x_stream, y_stream)
-
-U, V, Us, Vs = None, None, None, None
-title = ""
 
 # Расчёт полей
 if field_type == "Вихрь":
@@ -87,7 +92,7 @@ elif field_type == "Диполь":
     Us = (Xs**2 - Ys**2) / r4s
     Vs = (2 * Xs * Ys) / r4s
 
-else:  # Равномерный поток
+else:
     alpha_rad = np.radians(flow_angle)
     U = np.cos(alpha_rad) * np.ones_like(X)
     V = np.sin(alpha_rad) * np.ones_like(Y)
@@ -97,9 +102,21 @@ else:  # Равномерный поток
 
 magnitude = np.sqrt(U**2 + V**2)
 
+# Фильтрация больших векторов (только для диполя)
+if filter_vectors and field_type == "Диполь":
+    mask = magnitude <= max_speed
+    U_plot = np.where(mask, U, np.nan)
+    V_plot = np.where(mask, V, np.nan)
+    mag_plot = np.where(mask, magnitude, np.nan)
+    filtered_count = np.sum(~mask)
+    if filtered_count > 0:
+        st.sidebar.info(f"✂️ Отфильтровано {filtered_count} векторов (|v| > {max_speed})")
+else:
+    U_plot, V_plot, mag_plot = U, V, magnitude
+
 fig, ax = plt.subplots(figsize=(10, 8))
 
-q = ax.quiver(X, Y, U, V, magnitude,
+q = ax.quiver(X, Y, U_plot, V_plot, mag_plot,
               scale=arrow_scale,
               scale_units='xy',
               cmap='viridis',
@@ -139,9 +156,9 @@ with st.expander("О приложении"):
     - **Диполь** – поле диполя, замкнутые линии тока
     - **Равномерный поток** – постоянная скорость под заданным углом
 
-    **Особенности реализации:**
+    **Особенности:**
     - Длина стрелки пропорциональна модулю скорости
-    - Цвет стрелок соответствует модулю скорости (цветовая шкала)
+    - Цвет стрелок соответствует модулю скорости
     - Линии тока (красные) строятся численным интегрированием
-    - Динамические параметры: для диполя не показываются Q и Γ
+    - **Для диполя** можно отфильтровать слишком большие векторы в центре
     """)
