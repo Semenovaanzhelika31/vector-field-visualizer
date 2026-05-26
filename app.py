@@ -1,7 +1,6 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
 
 st.set_page_config(page_title="Визуализация векторных полей", layout="wide")
 st.title("Научная визуализация векторных полей")
@@ -20,13 +19,13 @@ show_streamlines = st.sidebar.checkbox("Показать линии тока", T
 
 # Отдельные параметры масштаба для разных типов полей
 if field_type == "Диполь":
-    arrow_scale = st.sidebar.slider("Масштаб стрелок (чем больше, тем короче)", 20, 200, 80, 10)
+    arrow_scale = st.sidebar.slider("Масштаб стрелок (чем больше, тем короче)", 20, 150, 60, 10)
 else:
     arrow_scale = st.sidebar.slider("Масштаб стрелок", 0.1, 2.0, 0.5, 0.05)
 
 # Для диполя: исключаем центр
 if field_type == "Диполь":
-    exclude_radius = st.sidebar.slider("Радиус исключения стрелок (центр)", 0.0, 1.0, 0.4, 0.05)
+    exclude_radius = st.sidebar.slider("Радиус исключения стрелок (центр)", 0.0, 1.0, 0.3, 0.05)
 
 # Динамические параметры
 if field_type in ["Источник/Сток", "Вихреисточник"]:
@@ -119,24 +118,22 @@ else:
 
 fig, ax = plt.subplots(figsize=(10, 8))
 
-# Используем логарифмическую цветовую шкалу для диполя, чтобы видеть градиент
-if field_type == "Диполь":
-    q = ax.quiver(X, Y, U_plot, V_plot, mag_plot,
-                  scale=arrow_scale,
-                  scale_units='xy',
-                  cmap='viridis',
-                  alpha=0.8,
-                  width=0.005,
-                  norm=LogNorm(vmin=0.01, vmax=mag_plot.max()))
-else:
-    q = ax.quiver(X, Y, U_plot, V_plot, mag_plot,
-                  scale=arrow_scale,
-                  scale_units='xy',
-                  cmap='viridis',
-                  alpha=0.8,
-                  width=0.005)
+# Обычная цветовая шкала без LogNorm
+q = ax.quiver(X, Y, U_plot, V_plot, mag_plot,
+              scale=arrow_scale,
+              scale_units='xy',
+              cmap='viridis',
+              alpha=0.8,
+              width=0.005)
 
-plt.colorbar(q, ax=ax, label='Модуль скорости')
+# Добавляем colorbar с ограничением диапазона для диполя
+if field_type == "Диполь":
+    # Ограничиваем диапазон цветовой шкалы для лучшей видимости
+    vmax = min(mag_plot.max(), 5.0) if not np.isnan(mag_plot.max()) else 5.0
+    cb = plt.colorbar(q, ax=ax, label='Модуль скорости')
+    cb.set_clim(0, vmax)
+else:
+    plt.colorbar(q, ax=ax, label='Модуль скорости')
 
 if show_streamlines:
     ax.streamplot(Xs, Ys, Us, Vs,
@@ -163,14 +160,14 @@ if st.button("Сохранить изображение как PNG"):
 with st.expander("О приложении"):
     st.markdown(r"""
     **Доступные типы полей:**
-    - **Источник/Сток** – радиальное течение
-    - **Вихрь** – круговое течение
-    - **Вихреисточник** – спирали
-    - **Диполь** – замкнутые линии тока
-    - **Равномерный поток** – параллельные линии
+    - **Источник/Сток** – радиальное течение (Q>0 – источник, Q<0 – сток)
+    - **Вихрь** – круговое течение, линии тока – окружности
+    - **Вихреисточник** – суперпозиция источника и вихря (логарифмические спирали)
+    - **Диполь** – поле диполя, замкнутые линии тока
+    - **Равномерный поток** – постоянная скорость под заданным углом
 
     **Для диполя:**
     - Стрелки в центре исключаются (можно настроить радиус)
-    - Логарифмическая цветовая шкала для лучшего отображения градиента
-    - Большой масштаб стрелок (чем больше значение, тем короче стрелки)
+    - Цветовая шкала ограничена сверху для лучшей видимости
+    - Масштаб стрелок (чем больше значение, тем короче стрелки)
     """)
