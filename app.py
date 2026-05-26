@@ -18,14 +18,6 @@ arrow_scale = st.sidebar.slider("Множитель длины стрелок", 
 show_grid = st.sidebar.checkbox("Показать сетку", True)
 show_streamlines = st.sidebar.checkbox("Показать линии тока", True)
 
-# Фильтрация больших векторов (только для диполя)
-if field_type == "Диполь":
-    filter_vectors = st.sidebar.checkbox("Фильтровать большие векторы", True)
-    max_speed = st.sidebar.slider("Максимальный модуль скорости", 0.5, 5.0, 2.0, 0.5)
-else:
-    filter_vectors = False
-    max_speed = 10.0
-
 # Динамические параметры
 if field_type in ["Источник/Сток", "Вихреисточник"]:
     Q = st.sidebar.slider("Мощность источника Q (+ источник, - сток)", -2.0, 2.0, 1.0, 0.1)
@@ -102,15 +94,15 @@ else:
 
 magnitude = np.sqrt(U**2 + V**2)
 
-# Фильтрация больших векторов (только для диполя)
-if filter_vectors and field_type == "Диполь":
-    mask = magnitude <= max_speed
-    U_plot = np.where(mask, U, np.nan)
-    V_plot = np.where(mask, V, np.nan)
-    mag_plot = np.where(mask, magnitude, np.nan)
-    filtered_count = np.sum(~mask)
-    if filtered_count > 0:
-        st.sidebar.info(f"✂️ Отфильтровано {filtered_count} векторов (|v| > {max_speed})")
+# Для диполя: ограничиваем максимальную длину стрелок
+if field_type == "Диполь":
+    max_arrow_length = 2.0  # максимальная длина стрелки в координатах
+    # Нормируем слишком длинные векторы
+    length = np.sqrt(U**2 + V**2)
+    scale_factor = np.where(length > max_arrow_length, max_arrow_length / length, 1.0)
+    U_plot = U * scale_factor
+    V_plot = V * scale_factor
+    mag_plot = magnitude  # цвет оставляем по реальному модулю
 else:
     U_plot, V_plot, mag_plot = U, V, magnitude
 
@@ -160,5 +152,5 @@ with st.expander("О приложении"):
     - Длина стрелки пропорциональна модулю скорости
     - Цвет стрелок соответствует модулю скорости
     - Линии тока (красные) строятся численным интегрированием
-    - **Для диполя** можно отфильтровать слишком большие векторы в центре
+    - **Для диполя** длина стрелок ограничена (не более 2.0), чтобы избежать огромных стрелок в центре
     """)
