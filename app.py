@@ -105,8 +105,7 @@ else:  # Равномерный поток
 
 magnitude = np.sqrt(U**2 + V**2)
 
-# ИЗМЕНЕНО: figsize=(6.4, 3.6) дюйма * 300 dpi = 1920×1080 пикселей
-fig, ax = plt.subplots(figsize=(6.4, 3.6), dpi=300)
+fig, ax = plt.subplots(figsize=(10, 8))
 
 q = ax.quiver(X, Y, U, V, magnitude,
               scale=arrow_scale,
@@ -135,9 +134,8 @@ ax.set_ylim(-3, 3)
 
 st.pyplot(fig)
 
-# ИСПРАВЛЕНО: сохранение с dpi=300
 if st.button("Сохранить изображение как PNG"):
-    fig.savefig("vector_field.png", dpi=300, bbox_inches='tight')
+    fig.savefig("vector_field.png", dpi=150)
     st.success("Изображение сохранено как vector_field.png")
 
 with st.expander("📘 О текущем течении"):
@@ -209,7 +207,7 @@ with st.expander("📘 О текущем течении"):
         **Анализ.** При $\\alpha_0 = 0$ поток направлен вдоль оси $x$; при $\\alpha_0 = 90^\\circ$ — вдоль оси $y$. Линии тока — параллельные прямые.
         """)
 
-with st.expander(" О приложении"):
+with st.expander("ℹ️ О приложении"):
     st.markdown(r"""
     **Реализованные типы полей:**
     - **Источник (сток)** – радиальное течение
