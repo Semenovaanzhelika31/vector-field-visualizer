@@ -105,7 +105,7 @@ else:  # Равномерный поток
 
 magnitude = np.sqrt(U**2 + V**2)
 
-fig, ax = plt.subplots(figsize=(10, 8))
+fig, ax = plt.subplots(figsize=(6.4, 3.6), dpi=300)
 
 q = ax.quiver(X, Y, U, V, magnitude,
               scale=arrow_scale,
@@ -135,7 +135,7 @@ ax.set_ylim(-3, 3)
 st.pyplot(fig)
 
 if st.button("Сохранить изображение как PNG"):
-    fig.savefig("vector_field.png", dpi=150)
+    fig.savefig("vector_field.png", dpi=300, bbox_inches='tight')
     st.success("Изображение сохранено как vector_field.png")
 
 with st.expander("📘 О текущем течении"):
