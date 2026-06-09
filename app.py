@@ -169,11 +169,11 @@ def save_high_res():
     plt.close(fig_save)
     st.success("Изображение сохранено как vector_field.png (1920×1080, 300 dpi)")
 
-if st.button("💾 Сохранить изображение как PNG (1920×1080, 300 dpi)"):
+if st.button(" Сохранить изображение как PNG (1920×1080, 300 dpi)"):
     save_high_res()
 
 # ========== ИНФОРМАЦИОННЫЕ БЛОКИ ==========
-with st.expander("📘 О текущем течении"):
+with st.expander(" О текущем течении"):
     if field_type == "Источник (сток)":
         name = "Источник" if Q > 0 else "Сток"
         st.markdown(f"""
