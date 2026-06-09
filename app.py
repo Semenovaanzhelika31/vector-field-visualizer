@@ -59,11 +59,11 @@ Xs, Ys = np.meshgrid(x_stream, y_stream)
 if field_type == "Вихрь":
     r2 = X**2 + Y**2 + eps
     U = -Gamma * Y / (2*np.pi * r2)
-    V =  Gamma * X / (2*np.pi * r2)
+    V = Gamma * X / (2*np.pi * r2)
     title = f"Вихрь (Γ = {Gamma})"
     r2s = Xs**2 + Ys**2 + eps
     Us = -Gamma * Ys / (2*np.pi * r2s)
-    Vs =  Gamma * Xs / (2*np.pi * r2s)
+    Vs = Gamma * Xs / (2*np.pi * r2s)
 
 elif field_type == "Источник (сток)":
     r2 = X**2 + Y**2 + eps
@@ -105,39 +105,74 @@ else:  # Равномерный поток
 
 magnitude = np.sqrt(U**2 + V**2)
 
-fig, ax = plt.subplots(figsize=(6.4, 3.6), dpi=300)
+# ========== ФИГУРА ДЛЯ ОТОБРАЖЕНИЯ В STREAMLIT (нормальный размер) ==========
+fig_display, ax_display = plt.subplots(figsize=(10, 8))
 
-q = ax.quiver(X, Y, U, V, magnitude,
-              scale=arrow_scale,
-              scale_units='xy',
-              cmap='viridis',
-              alpha=0.8,
-              width=0.005)
+q_display = ax_display.quiver(X, Y, U, V, magnitude,
+                              scale=arrow_scale,
+                              scale_units='xy',
+                              cmap='viridis',
+                              alpha=0.8,
+                              width=0.005)
 
-plt.colorbar(q, ax=ax, label='Модуль скорости')
+plt.colorbar(q_display, ax=ax_display, label='Модуль скорости')
 
 if show_streamlines:
-    ax.streamplot(Xs, Ys, Us, Vs,
-                  color='red',
-                  linewidth=0.8,
-                  density=1.5,
-                  arrowsize=0.8)
+    ax_display.streamplot(Xs, Ys, Us, Vs,
+                          color='red',
+                          linewidth=0.8,
+                          density=1.5,
+                          arrowsize=0.8)
 
-ax.set_title(title, fontsize=14)
-ax.set_xlabel("x")
-ax.set_ylabel("y")
+ax_display.set_title(title, fontsize=14)
+ax_display.set_xlabel("x")
+ax_display.set_ylabel("y")
 if show_grid:
-    ax.grid(True, linestyle='--', alpha=0.5)
-ax.axis("equal")
-ax.set_xlim(-3, 3)
-ax.set_ylim(-3, 3)
+    ax_display.grid(True, linestyle='--', alpha=0.5)
+ax_display.axis("equal")
+ax_display.set_xlim(-3, 3)
+ax_display.set_ylim(-3, 3)
 
-st.pyplot(fig)
+# Отображаем в Streamlit
+st.pyplot(fig_display)
 
-if st.button("Сохранить изображение как PNG"):
-    fig.savefig("vector_field.png", dpi=300, bbox_inches='tight')
-    st.success("Изображение сохранено как vector_field.png")
+# ========== ФУНКЦИЯ ДЛЯ СОХРАНЕНИЯ ВЫСОКОГО РАЗРЕШЕНИЯ (1920×1080, 300 dpi) ==========
+def save_high_res():
+    fig_save, ax_save = plt.subplots(figsize=(6.4, 3.6), dpi=300)
+    
+    q_save = ax_save.quiver(X, Y, U, V, magnitude,
+                            scale=arrow_scale,
+                            scale_units='xy',
+                            cmap='viridis',
+                            alpha=0.8,
+                            width=0.005)
+    
+    plt.colorbar(q_save, ax=ax_save, label='Модуль скорости')
+    
+    if show_streamlines:
+        ax_save.streamplot(Xs, Ys, Us, Vs,
+                           color='red',
+                           linewidth=0.8,
+                           density=1.5,
+                           arrowsize=0.8)
+    
+    ax_save.set_title(title, fontsize=14)
+    ax_save.set_xlabel("x")
+    ax_save.set_ylabel("y")
+    if show_grid:
+        ax_save.grid(True, linestyle='--', alpha=0.5)
+    ax_save.axis("equal")
+    ax_save.set_xlim(-3, 3)
+    ax_save.set_ylim(-3, 3)
+    
+    fig_save.savefig("vector_field.png", dpi=300, bbox_inches='tight')
+    plt.close(fig_save)
+    st.success("Изображение сохранено как vector_field.png (1920×1080, 300 dpi)")
 
+if st.button("💾 Сохранить изображение как PNG (1920×1080, 300 dpi)"):
+    save_high_res()
+
+# ========== ИНФОРМАЦИОННЫЕ БЛОКИ ==========
 with st.expander("📘 О текущем течении"):
     if field_type == "Источник (сток)":
         name = "Источник" if Q > 0 else "Сток"
@@ -207,7 +242,7 @@ with st.expander("📘 О текущем течении"):
         **Анализ.** При $\\alpha_0 = 0$ поток направлен вдоль оси $x$; при $\\alpha_0 = 90^\\circ$ — вдоль оси $y$. Линии тока — параллельные прямые.
         """)
 
-with st.expander("ℹ️ О приложении"):
+with st.expander(" О приложении"):
     st.markdown(r"""
     **Реализованные типы полей:**
     - **Источник (сток)** – радиальное течение
