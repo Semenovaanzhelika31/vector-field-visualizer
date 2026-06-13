@@ -13,7 +13,7 @@ field_type = st.sidebar.selectbox(
     ["Источник (сток)", "Вихрь", "Вихреисточник", "Диполь", "Равномерный поток"]
 )
 
-grid_size = st.sidebar.slider("Размер сетки для стрелок (N x N)", 10, 50, 20)
+grid_size = st.sidebar.slider("Размер сетки для стрелок (N x N)", 10, 50, 25)
 show_grid = st.sidebar.checkbox("Показать сетку", True)
 show_streamlines = st.sidebar.checkbox("Показать линии тока", True)
 
